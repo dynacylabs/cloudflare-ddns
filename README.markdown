@@ -265,6 +265,37 @@ services:
 - **`DNS`**: Validates DNS resolution for configured domains
 - **`FULL`**: Performs all available health checks
 
+#### Docker Compose Example
+
+Here's a complete example of adding healthcheck configuration to your `docker-compose.yml`:
+
+```yaml
+services:
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      # Your existing DDNS configuration
+      CF_API_TOKEN: "${CF_API_TOKEN}"
+      DOMAINS: "example.com,*.example.com"
+      
+      # Healthcheck configuration
+      HEALTHCHECK_LEVEL: "DNS"
+      HEALTHCHECK_DNS: "example.com"
+      HEALTHCHECK_VERBOSE: "true"
+    
+    # Optional: Override default healthcheck settings
+    healthcheck:
+      test: ["CMD", "/app/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+```
+
+The healthcheck is built into the Docker image by default. The `healthcheck` section is optional and only needed if you want to customize the timing or retry behavior.
+
 #### Monitoring Container Health
 
 View the health status using Docker commands:
