@@ -229,6 +229,90 @@ docker-compose pull cloudflare-ddns
 docker-compose up --detach --build cloudflare-ddns
 ```
 
+### 🏥 Docker Health Monitoring
+
+The container includes a built-in healthcheck that verifies the DDNS updater is working correctly. The healthcheck runs every 30 seconds and performs several validation steps:
+
+- **Process Health**: Confirms the main DDNS process is running
+- **IP Provider Test**: Verifies connectivity to IP detection services  
+- **DNS Validation**: Checks if configured domains resolve correctly
+
+#### Healthcheck Configuration
+
+The healthcheck behavior can be customized using environment variables:
+
+```yaml
+services:
+  cloudflare-ddns:
+    environment:
+      # Configure healthcheck validation level (default: BASIC)
+      HEALTHCHECK_LEVEL: "PROVIDERS"     # BASIC | PROVIDERS | DNS | FULL
+      
+      # Test specific IP providers (comma-separated)
+      HEALTHCHECK_PROVIDERS: "cloudflare.doh,ipify"
+      
+      # Test DNS resolution for specific domains
+      HEALTHCHECK_DNS: "example.com,subdomain.example.com"
+      
+      # Enable detailed healthcheck logging
+      HEALTHCHECK_VERBOSE: "true"
+```
+
+#### Validation Levels
+
+- **`BASIC`** (default): Only checks if the DDNS process is running
+- **`PROVIDERS`**: Tests connectivity to IP detection services
+- **`DNS`**: Validates DNS resolution for configured domains
+- **`FULL`**: Performs all available health checks
+
+#### Docker Compose Example
+
+Here's a complete example of adding healthcheck configuration to your `docker-compose.yml`:
+
+```yaml
+services:
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      # Your existing DDNS configuration
+      CF_API_TOKEN: "${CF_API_TOKEN}"
+      DOMAINS: "example.com,*.example.com"
+      
+      # Healthcheck configuration
+      HEALTHCHECK_LEVEL: "DNS"
+      HEALTHCHECK_DNS: "example.com"
+      HEALTHCHECK_VERBOSE: "true"
+    
+    # Optional: Override default healthcheck settings
+    healthcheck:
+      test: ["CMD", "/app/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+```
+
+The healthcheck is built into the Docker image by default. The `healthcheck` section is optional and only needed if you want to customize the timing or retry behavior.
+
+#### Monitoring Container Health
+
+View the health status using Docker commands:
+
+```bash
+# Check current health status
+docker ps
+
+# View detailed health check logs
+docker inspect cloudflare-ddns | grep -A 10 "Health"
+
+# Monitor health check output in real-time
+docker logs -f cloudflare-ddns 2>&1 | grep healthcheck
+```
+
+The container will be marked as `healthy` when all configured checks pass, or `unhealthy` if any validation fails. This integrates with Docker Compose, Kubernetes, and monitoring systems that check container health status.
+
 ## ❓ Frequently Asked Questions
 
 <details>
