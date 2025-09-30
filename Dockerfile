@@ -33,8 +33,6 @@ RUN apk add --no-cache ca-certificates-bundle
 COPY --from=build /bin/ddns /bin/
 COPY --from=build /bin/healthcheck /bin/
 USER 1000:1000
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD ["/bin/healthcheck"]
 ENTRYPOINT ["/bin/ddns"]
 
 # The minimal images contain only the program and the consolidated certificates.
@@ -42,6 +40,7 @@ FROM scratch AS minimal
 COPY --from=build /bin/ddns /bin/
 COPY --from=build /bin/healthcheck /bin/
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
 USER 1000:1000
 
 ENTRYPOINT ["/bin/ddns"]
