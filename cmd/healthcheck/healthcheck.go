@@ -38,6 +38,9 @@ type healthcheckConfig struct {
 	checkConnectivity bool
 	checkDNS         bool
 	
+	// Development mode
+	devMode          bool
+	
 	// Output settings
 	verbose          bool
 	logToFile        bool
@@ -75,6 +78,12 @@ func parseConfig() healthcheckConfig {
 	cfg.checkProviders = getEnvBool("HEALTHCHECK_PROVIDERS", cfg.checkProviders)
 	cfg.checkConnectivity = getEnvBool("HEALTHCHECK_CONNECTIVITY", cfg.checkConnectivity)
 	cfg.checkDNS = getEnvBool("HEALTHCHECK_DNS", cfg.checkDNS)
+	
+	// Development mode - skip process checks if no DDNS process is expected
+	cfg.devMode = getEnvBool("HEALTHCHECK_DEV_MODE", cfg.devMode)
+	if cfg.devMode {
+		cfg.checkProcess = false
+	}
 	
 	// Legacy environment variable support
 	if getEnvBool("DNS_CHECK_ENABLED", false) {
@@ -187,7 +196,11 @@ func findDDNSProcess() (int, error) {
 		}
 
 		cmdline := string(cmdlineBytes)
-		if strings.Contains(cmdline, "/bin/ddns") {
+		// Look for various forms of ddns processes
+		if strings.Contains(cmdline, "/bin/ddns") || 
+		   strings.Contains(cmdline, "./ddns") ||
+		   strings.Contains(cmdline, "cmd/ddns/ddns.go") ||
+		   (strings.Contains(cmdline, "ddns") && strings.Contains(cmdline, "go run")) {
 			return pid, nil
 		}
 	}
@@ -408,6 +421,7 @@ ENVIRONMENT VARIABLES:
     HEALTHCHECK_CONNECTIVITY    Enable connectivity testing (default: false)
     HEALTHCHECK_DNS             Enable DNS resolution testing (default: false)
     HEALTHCHECK_IPV6            Test IPv6 detection (default: false)
+    HEALTHCHECK_DEV_MODE        Skip process checks for development (default: false)
     HEALTHCHECK_VERBOSE         Enable verbose output (default: false)
     HEALTHCHECK_LOG             Enable file logging (default: true)
     
