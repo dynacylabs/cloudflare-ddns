@@ -21,24 +21,16 @@ RUN \
   go build -tags "timetzdata" -trimpath -ldflags="-w -s -X main.Version=${GIT_DESCRIBE} -buildid=" \
   -o /bin/ddns ./cmd/ddns
 
-# Build the healthcheck binary
-RUN \
-  CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT#v} \
-  go build -trimpath -ldflags="-w -s -buildid=" \
-  -o /bin/healthcheck ./cmd/healthcheck
-
 # The "alpine" stage can be used directly for debugging network issues.
 FROM alpine:3.22.0@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be023728e11715 AS alpine
 RUN apk add --no-cache ca-certificates-bundle
 COPY --from=build /bin/ddns /bin/
-COPY --from=build /bin/healthcheck /bin/
 USER 1000:1000
 ENTRYPOINT ["/bin/ddns"]
 
 # The minimal images contain only the program and the consolidated certificates.
 FROM scratch AS minimal
 COPY --from=build /bin/ddns /bin/
-COPY --from=build /bin/healthcheck /bin/
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 USER 1000:1000

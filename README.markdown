@@ -231,70 +231,61 @@ docker-compose up --detach --build cloudflare-ddns
 
 ### 🏥 Docker Health Monitoring
 
-The container includes a built-in healthcheck that verifies the DDNS updater is working correctly. The healthcheck runs every 30 seconds and performs several validation steps:
+The `cloudflare-ddns` binary includes a built-in healthcheck command that verifies DDNS records are being updated correctly. This healthcheck can be used with Docker to monitor the health of your container.
 
-- **Process Health**: Confirms the main DDNS process is running
-- **IP Provider Test**: Verifies connectivity to IP detection services  
-- **DNS Validation**: Checks if configured domains resolve correctly
+#### How the Healthcheck Works
 
-#### Healthcheck Configuration
+When you run `/bin/ddns --healthcheck`, the updater performs the following operations:
 
-The healthcheck behavior can be customized using environment variables:
+1. **Configuration Validation**: Verifies that all configuration settings are valid
+2. **IP Detection**: Detects the current public IP address(es)
+3. **DNS Record Update**: Attempts to update the configured DNS records with the detected IP addresses
+4. **Status Reporting**: Returns exit code `0` if all operations succeed, or `1` if any operation fails
 
-```yaml
-services:
-  cloudflare-ddns:
-    environment:
-      # Configure healthcheck validation level (default: BASIC)
-      HEALTHCHECK_LEVEL: "PROVIDERS"     # BASIC | PROVIDERS | DNS | FULL
-      
-      # Test specific IP providers (comma-separated)
-      HEALTHCHECK_PROVIDERS: "cloudflare.doh,ipify"
-      
-      # Test DNS resolution for specific domains
-      HEALTHCHECK_DNS: "example.com,subdomain.example.com"
-      
-      # Enable detailed healthcheck logging
-      HEALTHCHECK_VERBOSE: "true"
-```
+The healthcheck uses the same configuration as the main updater process (environment variables like `CLOUDFLARE_API_TOKEN`, `DOMAINS`, etc.), so it reflects the actual state of your DDNS setup.
 
-#### Validation Levels
+#### Docker Compose Healthcheck Example
 
-- **`BASIC`** (default): Only checks if the DDNS process is running
-- **`PROVIDERS`**: Tests connectivity to IP detection services
-- **`DNS`**: Validates DNS resolution for configured domains
-- **`FULL`**: Performs all available health checks
-
-#### Docker Compose Example
-
-Here's a complete example of adding healthcheck configuration to your `docker-compose.yml`:
+You can add a healthcheck to your `docker-compose.yml` to monitor the container's health:
 
 ```yaml
 services:
   cloudflare-ddns:
     image: favonia/cloudflare-ddns:latest
     container_name: cloudflare-ddns
+    network_mode: host
     restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [all]
+    security_opt: [no-new-privileges:true]
     environment:
-      # Your existing DDNS configuration
-      CF_API_TOKEN: "${CF_API_TOKEN}"
-      DOMAINS: "example.com,*.example.com"
-      
-      # Healthcheck configuration
-      HEALTHCHECK_LEVEL: "DNS"
-      HEALTHCHECK_DNS: "example.com"
-      HEALTHCHECK_VERBOSE: "true"
-    
-    # Optional: Override default healthcheck settings
+      - CLOUDFLARE_API_TOKEN=YOUR-CLOUDFLARE-API-TOKEN
+      - DOMAINS=example.org,www.example.org
+      - PROXIED=true
     healthcheck:
-      test: ["CMD", "/app/healthcheck"]
-      interval: 30s
-      timeout: 10s
-      start_period: 60s
+      test: ["CMD", "/bin/ddns", "--healthcheck"]
+      interval: 5m
+      timeout: 30s
+      start_period: 30s
       retries: 3
 ```
 
-The healthcheck is built into the Docker image by default. The `healthcheck` section is optional and only needed if you want to customize the timing or retry behavior.
+#### Healthcheck Configuration Options
+
+The `healthcheck` section supports the following options:
+
+- **`test`**: The command to run for the healthcheck. Use `["CMD", "/bin/ddns", "--healthcheck"]`
+- **`interval`**: How often to run the healthcheck (e.g., `5m` for every 5 minutes). Should match or be longer than your `UPDATE_CRON` setting
+- **`timeout`**: Maximum time allowed for the healthcheck to complete (e.g., `30s`)
+- **`start_period`**: Grace period before the first healthcheck runs, allowing the container to start up (e.g., `30s`)
+- **`retries`**: Number of consecutive failures required to mark the container as unhealthy (e.g., `3`)
+
+#### Best Practices
+
+- **Interval Timing**: Set the healthcheck `interval` to match your `UPDATE_CRON` schedule. For example, if you update DNS records every 5 minutes (`UPDATE_CRON=@every 5m`), set `interval: 5m`
+- **Timeout**: Ensure the `timeout` is long enough to allow IP detection and DNS updates to complete (30 seconds is usually sufficient)
+- **Monitoring**: Use Docker's health status with `docker ps` to see if your container is healthy. You can also integrate with monitoring systems that check Docker container health
 
 #### Monitoring Container Health
 
