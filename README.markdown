@@ -263,6 +263,7 @@ services:
       - CLOUDFLARE_API_TOKEN=YOUR-CLOUDFLARE-API-TOKEN
       - DOMAINS=example.org,www.example.org
       - PROXIED=true
+      - IP6_PROVIDER=none  # Disable IPv6 if not supported (recommended for most Docker setups)
     healthcheck:
       test: ["CMD", "/bin/ddns", "--healthcheck"]
       interval: 5m
@@ -285,6 +286,7 @@ The `healthcheck` section supports the following options:
 
 - **Interval Timing**: Set the healthcheck `interval` to match your `UPDATE_CRON` schedule. For example, if you update DNS records every 5 minutes (`UPDATE_CRON=@every 5m`), set `interval: 5m`
 - **Timeout**: Ensure the `timeout` is long enough to allow IP detection and DNS updates to complete (30 seconds is usually sufficient)
+- **IPv6 Considerations**: ⚠️ **Important!** The healthcheck will fail if either IPv4 or IPv6 detection fails. If your Docker environment doesn't support IPv6 (which is common), set `IP6_PROVIDER=none` in your environment variables to disable IPv6 and prevent healthcheck failures. Similarly, set `IP4_PROVIDER=none` if your network doesn't support IPv4.
 - **Monitoring**: Use Docker's health status with `docker ps` to see if your container is healthy. You can also integrate with monitoring systems that check Docker container health
 
 #### Monitoring Container Health
