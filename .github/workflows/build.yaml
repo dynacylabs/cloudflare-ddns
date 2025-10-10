@@ -26,7 +26,7 @@ jobs:
       contents: read
     steps:
       - name: 🛡️ Harden Runner
-        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           egress-policy: audit
           disable-sudo: true
@@ -39,11 +39,11 @@ jobs:
       - name: 🤖 Set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
       - name: 🏗️ Set up Docker Buildx
-        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
         with:
           version: latest
       - name: 🔑 Log in to Docker
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         if: ${{ github.event_name != 'pull_request' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -54,7 +54,7 @@ jobs:
         run: echo 'GIT_DESCRIBE='`git describe --tags --always --long` >> $GITHUB_OUTPUT
         id: git-describe
       - name: 📝 Calculate metadata for minimal Docker images
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         id: meta
         with:
           images: ${{ github.repository }}
@@ -82,7 +82,7 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           provenance: "mode=max"
       - name: ✍️ Install Cosign
-        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.0
       - name: ✍️ Sign the minimal Docker images
         if: ${{ github.event_name == 'release' }}
         run: |
@@ -90,7 +90,7 @@ jobs:
 
       - name: 📝 Calculate metadata for Docker images with alpine
         if: ${{ github.event_name != 'release' }}
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         id: meta-alpine
         with:
           images: ${{ github.repository }}
